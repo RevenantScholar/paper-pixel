@@ -10,7 +10,7 @@ People drawing pixel art on paper need a printable grid and a way to turn the fi
 
 A Vercel-hosted frontend guides users through configure, print, draw, scan, and export. All worksheet generation, camera capture, marker detection, perspective correction, color sampling, palette reduction, and image export run in the browser. Photos and artwork stay on the device.
 
-Generate a square worksheet with four distinct registration markers outside the drawing area. Recover its geometry from a camera photograph, sample the interior of each cell, and produce an N × N image. Offer manual corner adjustment when automatic detection is unsuccessful. Users choose the palette size; the app calculates representative colors from the sampled drawing. Users can change that size without photographing the worksheet again.
+Generate a square worksheet with four distinct registration markers outside the drawing area. Recover its geometry from a camera photograph, sample the interior of each cell, and produce an N × N image. Offer manual corner adjustment when automatic detection is unsuccessful. Users either choose an inferred palette size or load an editable Lospec palette and map the original samples to its enabled colors. Users can change that size without photographing the worksheet again.
 
 ## Target Users
 
@@ -26,7 +26,7 @@ Generate a square worksheet with four distinct registration markers outside the 
 - Capture a photograph with a phone camera or load an existing image.
 - Correct rotation and perspective and preserve the worksheet's N × N logical pixel dimensions.
 - Let users export PNGs at a configurable positive integer scale: 1× produces N × N pixels and s× produces (N × s) × (N × s) pixels with sharp edges.
-- Support palette-size configuration from two colors (1-bit) through unrestricted 24-bit RGB output, deriving all limited-palette colors automatically from the sampled drawing.
+- Support inferred palette sizes from two colors through Full RGB, and exact mapping to user-selected editable palettes.
 - Provide a preview and recoverable controls for imperfect scans.
 - Deploy as a static frontend on Vercel.
 
@@ -57,7 +57,7 @@ flowchart TD
     F --> G[Detected grid and perspective correction]
     H[Manual corner adjustment] --> G
     G --> I[N × N sampled RGB colors]
-    I --> J[Infer colors for chosen palette size and convert]
+    I --> J[Infer colors or map to selected palette]
     J --> K[Preview and PNG download]
 ```
 
@@ -67,7 +67,7 @@ Component boundaries:
 |---|---|
 | Worksheet | Configuration, physical page layout, markers, printable output, versioned geometry and metadata |
 | Scanner | Camera lifecycle, image import, registration, perspective correction, cell sampling, scan recovery |
-| Artwork | Palette-size configuration, automatic color inference, conversion, preview, configurable integer export scaling, PNG export |
+| Artwork | Inferred and selected palettes, Lospec imports and bundled presets, local editing/library, conversion, preview, PNG export |
 
 The worksheet and scanner share one geometric definition so printed cell positions and sampled regions agree. Scanner output retains sampled RGB values separately from palette-converted output. Palette-size changes reuse completed results cached locally for the current sampled drawing or calculate from its original samples to avoid compounding quantization loss. The interface owns the current workflow state and session-memory cache; long-lived photo storage is not required.
 
@@ -89,13 +89,19 @@ Use four distinct ArUco-style registration markers to identify orientation and s
 
 ### Color conversion
 
-Users configure only the palette size. For a limit of K colors, calculate up to K representative colors from the sampled drawing and map each logical pixel to a representative color. Optimize the representation of the drawing under a color-error objective to be specified in detailed design. Palette colors may be calculated from groups of similar samples to consolidate variations in pigment coverage and capture; they need not be exact copies of individual photographed pixels.
+In From photo mode, users configure only the palette size. For a limit of K colors, calculate up to K representative colors from the sampled drawing and map each logical pixel to a representative color. Optimize the representation of the drawing under a color-error objective to be specified in detailed design. Palette colors may be calculated from groups of similar samples to consolidate variations in pigment coverage and capture; they need not be exact copies of individual photographed pixels.
 
-A 1-bit palette permits two inferred colors. For a drawing whose cells are green and blue, calculate representative green and blue colors. Neither black nor white is reserved or assumed. There are no preset or manually chosen palette colors. The palette is inferred from drawing-cell samples, excluding registration markers, grid lines, and page margins.
+A 1-bit palette permits two inferred colors. For a drawing whose cells are green and blue, calculate representative green and blue colors. Neither black nor white is reserved or assumed. From photo mode has no preset or manually chosen palette colors. The automatic palette is inferred from drawing-cell samples, excluding registration markers, grid lines, and page margins.
 
 Full RGB retains the sampled 8-bit red, green, and blue channels without intentional palette reduction. A limited palette is a maximum distinct-color count, not a requirement to insert colors absent from the drawing. If the drawing contains fewer distinct colors than the selected capacity, retain those colors without manufacturing additional ones.
 
 Sample cell interiors to avoid printed lines and aggregate samples to reduce paper texture. Full RGB represents the captured drawing; it does not promise exact recovery of pigment colors under arbitrary lighting. Uncolored cells participate as sampled paper colors. The artwork design defines the weighted Oklab objective, accepted capacities, and deterministic quantization algorithm.
+
+### Selected palettes
+
+Choose palette mode includes 24 statically bundled Lospec palettes, six per size 2, 4, 16, and 256, selected by descending download count at catalog creation. It also accepts a Lospec URL or slug. A Browse palettes on Lospec link opens in a new tab while preserving the drawing. The frontend downloads only public palette metadata directly from Lospec; photos and sampled pixels are never sent. Users can enable colors, edit a copy, add colors, undo, and reset to the imported palette. Selected palettes default to recoloring inferred source groups through editable group-to-color mappings. The drawing count is independent of palette capacity, and multiple groups may share a target. A direct closest-color method remains available for mapping original samples. Both selected methods use only exact enabled palette RGB values. The initial editable palette range is 2–256 distinct enabled colors.
+
+Remember up to 16 imported palette definitions locally for reuse. Edited copies persist with their imported originals and attribution. Image results remain in a bounded session cache keyed by drawing revision and complete palette identity; no artwork is persisted. Failed imports or unavailable local storage do not discard current artwork. Keep From photo as the fresh-session default and preserve both modes' settings when switching.
 
 ### PNG export scaling
 

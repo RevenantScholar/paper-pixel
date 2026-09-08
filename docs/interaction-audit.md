@@ -53,3 +53,11 @@ The approved resolutions are reflected in the component designs, requirements, a
 ## Color-sensitive Palette Distance
 
 Artwork uses ΔL² + 8Δa² + 8Δb² consistently for initialization errors and axis selection, Lloyd assignment and candidate comparison, and finalized-palette assignment. Frequency-weighted means remain the minimizing centroids for these fixed axis weights. Scanner samples and Full RGB remain unchanged; no saturation transform or special paper-color slot is introduced. Grayscale inputs retain neutral representatives. Reduced results remain deterministic and cacheable by drawing revision and capacity. Distinct hue preservation is preferred to equal-axis lightness fidelity, but small palettes cannot guarantee every pigment a representative.
+
+## Selected Palette Interactions
+
+From photo alone owns inferred capacity and the K≥U bypass. Choose palette always maps to enabled colors and stores mode-separated cache keys; same-size palettes cannot share results. Palette definitions may persist, while source and output pixels retain their session lifetime. Switching modes cancels import and quantization work independently. An unsuccessful replacement import leaves the previous valid palette usable; an invalid color edit deliberately marks output stale and disables download. Every export-affecting selection/edit changes the PNG export epoch. Public metadata requests to canonical Lospec palette JSON URLs are permitted; image uploads remain prohibited. No website search endpoint or proxy is used.
+
+## Group Recoloring Interactions
+
+Inference supplies stable cell groups separately from selected output. Overrides identify original target entries, while resolved RGB values identify cached output. A disabled overridden entry is an actionable invalid state; unassigned rows can update suggestions. Mapping contexts are session-only and never part of localStorage palette definitions. Shared targets intentionally merge groups; no unique assignment constraint can recolor paper merely to use all target colors. From photo shares the drawing-count preference but remains separate from target-palette state and the direct matching method.

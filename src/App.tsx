@@ -33,6 +33,10 @@ import { Job } from "./core/job";
 import { ScanSession } from "./core/session";
 import type { Detection } from "./core/detection";
 import { usePalette, type Drawing } from "./usePalette";
+import { useSelectedPalette } from "./useSelectedPalette";
+import { SelectedPalette } from "./components/SelectedPalette";
+import { GroupRecoloring } from "./components/GroupRecoloring";
+import { resolveGroupTargets } from "./core/recolor";
 import { PixelCanvas } from "./components/PixelCanvas";
 import { GridReview } from "./components/GridReview";
 function PixelFlower() {
@@ -110,6 +114,7 @@ export default function App() {
     video = useRef<HTMLVideoElement>(null),
     stream = useRef<MediaStream | null>(null),
     cameraId = useRef(0);
+  const chosenPalette = useSelectedPalette();
   const [palette, setPalette] = useState("rgb"),
     [customK, setCustomK] = useState("8"),
     [scale, setScale] = useState("1");
@@ -123,14 +128,106 @@ export default function App() {
         k >= 2 &&
         k <= 16777216 &&
         (palette !== "custom" || customK.trim() !== ""));
-  const pal = usePalette(source, k, paletteValid),
-    [encoding, setEncoding] = useState(false),
+  // @spec ARTWORK-040, ARTWORK-043, ARTWORK-044
+  const [method, setMethod] = useState<"groups" | "closest">("groups");
+  const [contexts, setContexts] = useState<
+    Record<string, Record<string, number>>
+  >({});
+  useEffect(() => setContexts({}), [source?.revision]);
+  const groupText =
+    palette === "rgb" ? "4" : palette === "custom" ? customK : palette;
+  const groupCount = Number(groupText);
+  const groupValid =
+    groupText.trim() !== "" &&
+    Number.isInteger(groupCount) &&
+    groupCount >= 2 &&
+    groupCount <= 256;
+  const grouping = chosenPalette.mode === "selected" && method === "groups";
+  const base = usePalette(
+    source,
+    grouping ? groupCount : k,
+    grouping ? groupValid : paletteValid,
+  );
+  const context = `${source?.revision}:${groupCount}:${chosenPalette.current?.slug}`;
+  const mappings = useMemo(
+    () =>
+      resolveGroupTargets(
+        grouping && base.ready && groupValid ? (base.output?.colors ?? []) : [],
+        chosenPalette.current?.colors ?? [],
+        contexts[context] ?? {},
+      ),
+    [
+      grouping,
+      base.ready,
+      groupValid,
+      base.output,
+      chosenPalette.current,
+      contexts,
+      context,
+    ],
+  );
+  const recolor = useMemo(
+    () =>
+      grouping && base.ready && base.output
+        ? { groups: base.output, targets: mappings.targets, count: groupCount }
+        : null,
+    [grouping, base.ready, base.output, mappings, groupCount],
+  );
+  const mapped = usePalette(
+    source,
+    null,
+    chosenPalette.mode === "selected" &&
+      chosenPalette.active.valid &&
+      (!grouping || (groupValid && base.ready && mappings.valid)),
+    chosenPalette.active.colors,
+    recolor,
+  );
+  const pal =
+    chosenPalette.mode === "photo"
+      ? base
+      : grouping && (!base.ready || !groupValid)
+        ? {
+            ...mapped,
+            ready: false,
+            status: base.status,
+            error: base.error,
+            retry: base.retry,
+            cancel: base.cancel,
+          }
+        : mapped;
+  function assignGroup(color: string, target: number) {
+    setContexts((previous) =>
+      Object.fromEntries(
+        [
+          ...Object.entries(previous).filter(([key]) => key !== context),
+          [context, { ...previous[context], [color]: target }],
+        ].slice(-32),
+      ),
+    );
+  }
+  function resetMappings() {
+    setContexts((previous) => {
+      const next = { ...previous };
+      delete next[context];
+      return next;
+    });
+  }
+  const [encoding, setEncoding] = useState(false),
     [exportError, setExportError] = useState(""),
     exportEpoch = useRef(0);
   useEffect(() => {
     exportEpoch.current++;
     setExportError("");
-  }, [source, palette, customK, scale]);
+  }, [
+    source,
+    palette,
+    customK,
+    scale,
+    chosenPalette.mode,
+    chosenPalette.current,
+    method,
+    contexts,
+  ]);
   // @spec SCANNER-004
   function stopCamera() {
     cameraId.current++;
@@ -848,37 +945,102 @@ export default function App() {
                     )}
                     {source && (
                       <>
-                        <div className="palette-row">
-                          <label htmlFor="palette-size">Palette size</label>
-                          <select
-                            id="palette-size"
-                            value={palette}
-                            onChange={(e) => setPalette(e.target.value)}
+                        <div
+                          className="palette-mode"
+                          role="group"
+                          aria-label="Palette mode"
+                        >
+                          <button
+                            type="button"
+                            aria-pressed={chosenPalette.mode === "photo"}
+                            onClick={() => chosenPalette.setMode("photo")}
                           >
-                            <option value="rgb">
-                              Full RGB · original colors
-                            </option>
-                            <option value="2">2 colors · 1-bit</option>
-                            <option value="4">4 colors · 2-bit</option>
-                            <option value="16">16 colors · 4-bit</option>
-                            <option value="256">256 colors · 8-bit</option>
-                            <option value="custom">Custom color count</option>
-                          </select>
-                          {palette === "custom" && (
-                            <input
-                              aria-label="Custom color count"
-                              type="number"
-                              min="2"
-                              max="16777216"
-                              value={customK}
-                              onChange={(e) => setCustomK(e.target.value)}
-                            />
-                          )}
+                            From photo
+                          </button>
+                          <button
+                            type="button"
+                            aria-pressed={chosenPalette.mode === "selected"}
+                            onClick={() => chosenPalette.setMode("selected")}
+                          >
+                            Choose palette
+                          </button>
                         </div>
-                        {!paletteValid && (
-                          <p className="field-error">
-                            Choose a whole-number capacity from 2 to 16,777,216.
-                          </p>
+                        {chosenPalette.mode === "selected" ? (
+                          <SelectedPalette
+                            model={chosenPalette}
+                            recolorControls={
+                              <GroupRecoloring
+                                method={method}
+                                onMethod={setMethod}
+                                count={groupText}
+                                onCount={(value) => {
+                                  setPalette("custom");
+                                  setCustomK(value);
+                                }}
+                                valid={groupValid}
+                                groups={
+                                  base.ready && groupValid ? base.output : null
+                                }
+                                palette={chosenPalette.current?.colors ?? []}
+                                indices={mappings.indices}
+                                onAssign={assignGroup}
+                                onReset={resetMappings}
+                              />
+                            }
+                            preview={
+                              pal.output ? (
+                                <>
+                                  <PixelCanvas
+                                    pixels={pal.output.pixels}
+                                    n={Math.sqrt(pal.output.pixels.length / 3)}
+                                  />
+                                  <span className="hint">
+                                    {pal.ready
+                                      ? "Live preview"
+                                      : "Previous result"}
+                                  </span>
+                                </>
+                              ) : undefined
+                            }
+                          />
+                        ) : (
+                          <>
+                            <div className="palette-row">
+                              <label htmlFor="palette-size">Palette size</label>
+                              <select
+                                id="palette-size"
+                                value={palette}
+                                onChange={(e) => setPalette(e.target.value)}
+                              >
+                                <option value="rgb">
+                                  Full RGB · original colors
+                                </option>
+                                <option value="2">2 colors · 1-bit</option>
+                                <option value="4">4 colors · 2-bit</option>
+                                <option value="16">16 colors · 4-bit</option>
+                                <option value="256">256 colors · 8-bit</option>
+                                <option value="custom">
+                                  Custom color count
+                                </option>
+                              </select>
+                              {palette === "custom" && (
+                                <input
+                                  aria-label="Custom color count"
+                                  type="number"
+                                  min="2"
+                                  max="16777216"
+                                  value={customK}
+                                  onChange={(e) => setCustomK(e.target.value)}
+                                />
+                              )}
+                            </div>
+                            {!paletteValid && (
+                              <p className="field-error">
+                                Choose a whole-number capacity from 2 to
+                                16,777,216.
+                              </p>
+                            )}
+                          </>
                         )}
                         {pal.output && (
                           <>
@@ -898,7 +1060,9 @@ export default function App() {
                                   ? "Cached palette"
                                   : pal.status === "original"
                                     ? "Original colors"
-                                    : "Collected from your drawing"}
+                                    : chosenPalette.mode === "selected"
+                                      ? "Matched to selected colors"
+                                      : "Collected from your drawing"}
                               </span>
                             </div>
                           </>
@@ -916,7 +1080,12 @@ export default function App() {
                               {pal.error}
                               <div className="inline-actions">
                                 <button onClick={pal.retry}>Retry</button>
-                                <button onClick={() => setPalette("rgb")}>
+                                <button
+                                  onClick={() => {
+                                    setPalette("rgb");
+                                    chosenPalette.setMode("photo");
+                                  }}
+                                >
                                   Use Full RGB
                                 </button>
                               </div>

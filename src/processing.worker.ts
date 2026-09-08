@@ -1,7 +1,7 @@
 import { detectGrid } from "./core/detection";
 import { sampleGrid } from "./core/geometry";
-import { quantize } from "./core/artwork";
-// @spec SCANNER-009, ARTWORK-016
+import { quantize, mapPalette, recolorGroups } from "./core/artwork";
+// @spec SCANNER-009, ARTWORK-016, ARTWORK-036, ARTWORK-042
 self.onmessage = (event: MessageEvent) => {
   const { id, kind, ...args } = event.data;
   try {
@@ -10,7 +10,11 @@ self.onmessage = (event: MessageEvent) => {
         ? detectGrid(args.image)
         : kind === "sample"
           ? sampleGrid(args.image, args.corners, args.n)
-          : quantize(args.pixels, args.k);
+          : kind === "recolor"
+            ? recolorGroups(args.groups, args.targets)
+            : kind === "map"
+              ? mapPalette(args.pixels, args.colors)
+              : quantize(args.pixels, args.k);
     self.postMessage({ id, result });
   } catch (error) {
     self.postMessage({

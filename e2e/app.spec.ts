@@ -379,3 +379,306 @@ for (const format of ["jpeg", "webp"] as const)
       page.getByRole("button", { name: "Download PNG", exact: true }),
     ).toBeEnabled({ timeout: 20000 });
   });
+
+// @spec ARTWORK-033, ARTWORK-036, ARTWORK-039
+test("uses bundled palettes offline with six choices per size on mobile", async ({
+  page,
+}) => {
+  await load(page);
+  const external: string[] = [];
+  page.on("request", (r) => {
+    if (r.url().startsWith("https://lospec.com")) external.push(r.url());
+  });
+  await page
+    .getByRole("button", { name: "Choose palette", exact: true })
+    .click();
+  await expect(
+    page.getByRole("link", { name: /Browse on Lospec/ }),
+  ).toHaveAttribute("target", "_blank");
+  for (const n of [2, 4, 16, 256]) {
+    await page
+      .getByRole("combobox", { name: "Colors", exact: true })
+      .selectOption(String(n));
+    await expect(page.locator(".palette-card")).toHaveCount(6);
+  }
+  await page
+    .getByRole("combobox", { name: "Colors", exact: true })
+    .selectOption("16");
+  await page.getByLabel("Find a bundled palette").fill("PICO-8");
+  await expect(page.locator(".palette-card")).toHaveCount(1);
+  await page.locator(".palette-card").click();
+  await expect(
+    page.getByText("Matched to selected colors", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Download PNG", exact: true }),
+  ).toBeEnabled();
+  await page.setViewportSize({ width: 320, height: 812 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.getByText("Edit colors", { exact: true }).click();
+  await expect(page.getByLabel("Hex color 1", { exact: true })).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: `test-results/selected-palette-mobile-${test.info().project.name}.png`,
+    fullPage: true,
+  });
+  expect(external).toEqual([]);
+});
+
+// @spec ARTWORK-033, ARTWORK-034, ARTWORK-035, ARTWORK-036, ARTWORK-037, ARTWORK-038
+test("imports, edits, caches, and remembers palettes without persisting artwork", async ({
+  page,
+}) => {
+  await page.route(
+    "https://lospec.com/palette-list/test-palette.json",
+    (route) =>
+      route.fulfill({
+        json: {
+          name: "Test palette",
+          author: "Test artist",
+          colors: ["ff0000", "00ff00", "0000ff"],
+        },
+      }),
+  );
+  await load(page);
+  await page
+    .getByRole("button", { name: "Choose palette", exact: true })
+    .click();
+  await page
+    .getByLabel("Lospec palette URL or slug")
+    .fill("https://lospec.com/palette-list/test-palette");
+  await page.getByRole("button", { name: "Load palette", exact: true }).click();
+  await expect(
+    page.getByText("Matched to selected colors", { exact: true }),
+  ).toBeVisible();
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download PNG", exact: true }).click();
+  const file = await download;
+  const { data } = await sharp((await file.path())!)
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  for (let i = 0; i < data.length; i += 3)
+    expect(["255,0,0", "0,255,0", "0,0,255"]).toContain(
+      [...data.subarray(i, i + 3)].join(","),
+    );
+  await page.getByText("Edit colors", { exact: true }).click();
+  await page.getByLabel("Hex color 2", { exact: true }).fill("448844");
+  await expect(
+    page.getByRole("button", { name: "Download PNG", exact: true }),
+  ).toBeEnabled();
+  await page.getByRole("button", { name: "Undo edit", exact: true }).click();
+  await expect(page.getByText("Cached palette", { exact: true })).toBeVisible();
+  await page.getByLabel("Enable color 1", { exact: true }).uncheck();
+  await page.getByLabel("Enable color 2", { exact: true }).uncheck();
+  await expect(
+    page.getByText("Enable at least two different colors.", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Download PNG", exact: true }),
+  ).toBeDisabled();
+  await page
+    .getByRole("button", { name: "Reset palette", exact: true })
+    .click();
+  await page.getByLabel("Hex color 2", { exact: true }).fill("448844");
+  await expect(
+    page.getByRole("button", { name: "Download PNG", exact: true }),
+  ).toBeEnabled();
+  await page.getByLabel("Hex color 2", { exact: true }).fill("44");
+  await expect(
+    page.getByRole("button", { name: "Download PNG", exact: true }),
+  ).toBeDisabled();
+  const stored = await page.evaluate(() =>
+    localStorage.getItem("paper-pixel:palettes:v1"),
+  );
+  expect(stored).toContain("448844");
+  expect(stored).not.toContain("pixels");
+  await page.reload();
+  await load(page);
+  await expect(
+    page.getByRole("button", { name: "From photo", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await page
+    .getByRole("button", { name: "Choose palette", exact: true })
+    .click();
+  await page.getByLabel(/Remembered palettes/).selectOption("test-palette");
+  await page.getByText("Edit colors", { exact: true }).click();
+  await expect(page.getByLabel("Hex color 2", { exact: true })).toHaveValue(
+    "448844",
+  );
+  await page
+    .getByLabel("Lospec palette URL or slug")
+    .fill("https://example.com/nope");
+  await page.getByRole("button", { name: "Load palette", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("lospec.com");
+  await expect(
+    page.getByRole("button", { name: "Download PNG", exact: true }),
+  ).toBeEnabled();
+});
+
+// @spec ARTWORK-034, ARTWORK-035, ARTWORK-036, ARTWORK-037
+test("superseded imports cannot replace edits and slow imports time out", async ({
+  page,
+}) => {
+  await load(page);
+  await page
+    .getByRole("button", { name: "Choose palette", exact: true })
+    .click();
+  await page.getByLabel("Find a bundled palette").fill("PICO-8");
+  await page.locator(".palette-card").click();
+  await expect(
+    page.getByRole("button", { name: "Download PNG", exact: true }),
+  ).toBeEnabled();
+  await page.getByText("Edit colors", { exact: true }).click();
+  // Simulate a transport that resolves despite AbortSignal, exercising the request epoch.
+  await page.evaluate(() => {
+    const original = window.fetch;
+    (window as any).__pendingImports = [];
+    window.fetch = (...args) =>
+      String(args[0]).includes("lospec.com/palette-list/slow.json")
+        ? new Promise((resolve) =>
+            (window as any).__pendingImports.push(resolve),
+          )
+        : original(...args);
+  });
+  await page.getByLabel("Lospec palette URL or slug").fill("slow");
+  await page.getByRole("button", { name: "Load palette", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Cancel import", exact: true }),
+  ).toBeVisible();
+  await page.getByLabel("Hex color 1", { exact: true }).fill("123456");
+  await page.evaluate(() => {
+    for (const resolve of (window as any).__pendingImports.splice(0))
+      resolve(
+        new Response(
+          JSON.stringify({
+            name: "Stale palette",
+            colors: ["ffffff", "000000"],
+          }),
+        ),
+      );
+  });
+  await expect(page.getByLabel("Hex color 1", { exact: true })).toHaveValue(
+    "123456",
+  );
+  await expect(
+    page.getByRole("heading", { name: /Stale palette/ }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Download PNG", exact: true }),
+  ).toBeEnabled();
+  await page.clock.install();
+  await page.getByRole("button", { name: "Load palette", exact: true }).click();
+  await page.clock.fastForward(10001);
+  // Native fetch rejects on abort; explicitly reject the test transport on timeout.
+  await page.evaluate(() => {
+    for (const resolve of (window as any).__pendingImports.splice(0))
+      resolve(new Response("", { status: 500 }));
+  });
+  await expect(page.getByRole("alert")).toContainText("Loading took too long");
+  await expect(page.getByLabel("Hex color 1", { exact: true })).toHaveValue(
+    "123456",
+  );
+  await expect(
+    page.getByRole("button", { name: "Download PNG", exact: true }),
+  ).toBeEnabled();
+});
+
+// @spec ARTWORK-040, ARTWORK-041, ARTWORK-042, ARTWORK-043, ARTWORK-044
+test("recolors whole groups, retains mappings across counts and methods, and blocks missing targets", async ({
+  page,
+}) => {
+  await load(page);
+  await page
+    .getByRole("button", { name: "Choose palette", exact: true })
+    .click();
+  await page.getByLabel("Find a bundled palette").fill("PICO-8");
+  await page.locator(".palette-card").click();
+  const download = page.getByRole("button", {
+    name: "Download PNG",
+    exact: true,
+  });
+  await expect(download).toBeEnabled();
+  await expect(
+    page.getByRole("combobox", { name: "Color matching", exact: true }),
+  ).toHaveValue("groups");
+  await expect(page.getByLabel("Drawing colors", { exact: true })).toHaveValue(
+    "4",
+  );
+  const row = page.getByRole("button", {
+    name: "Drawing color 1",
+    exact: true,
+  });
+  await row.click();
+  const target = page.getByRole("button", {
+    name: /Map drawing color 1 to color 1,/,
+  });
+  await target.click();
+  await expect(target).toHaveAttribute("aria-pressed", "true");
+  await expect(download).toBeEnabled();
+  await page.getByLabel("Drawing colors", { exact: true }).fill("3");
+  await expect(download).toBeEnabled();
+  await page.getByLabel("Drawing colors", { exact: true }).fill("4");
+  await expect(download).toBeEnabled();
+  if ((await row.getAttribute("aria-expanded")) !== "true") await row.click();
+  await expect(target).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByText("Cached palette", { exact: true })).toBeVisible();
+  await page
+    .getByRole("combobox", { name: "Color matching", exact: true })
+    .selectOption("closest");
+  await expect(download).toBeEnabled();
+  await page
+    .getByRole("combobox", { name: "Color matching", exact: true })
+    .selectOption("groups");
+  await expect(download).toBeEnabled();
+  await expect(target).toHaveAttribute("aria-pressed", "true");
+  await page.getByText("Edit colors", { exact: true }).click();
+  await page.getByLabel("Hex color 1", { exact: true }).fill("123456");
+  await expect(row).toContainText("#123456");
+  await expect(download).toBeEnabled();
+  await page.getByLabel("Enable color 1", { exact: true }).uncheck();
+  await expect(download).toBeDisabled();
+  await expect(page.getByRole("alert")).toContainText("assigned color");
+  await page
+    .getByRole("button", { name: /Map drawing color 1 to color 2,/ })
+    .click();
+  await expect(download).toBeEnabled();
+  await page.getByLabel("Drawing colors", { exact: true }).fill("257");
+  await expect(download).toBeDisabled();
+  await expect(page.getByText("Choose 2 to 256 drawing colors.")).toBeVisible();
+  await page.getByLabel("Drawing colors", { exact: true }).fill("4");
+  await expect(download).toBeEnabled();
+  await page.setViewportSize({ width: 320, height: 812 });
+  await row.scrollIntoViewIfNeeded();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  const bounds = await page
+    .getByRole("button", { name: /Map drawing color 1 to color 2,/ })
+    .boundingBox();
+  expect(bounds!.width).toBeGreaterThanOrEqual(44);
+  expect(bounds!.height).toBeGreaterThanOrEqual(44);
+  const swatch = await page
+    .getByRole("button", { name: /Map drawing color 1 to color 2,/ })
+    .locator("i")
+    .boundingBox();
+  expect(swatch!.width).toBeGreaterThanOrEqual(26);
+  expect(swatch!.height).toBeGreaterThanOrEqual(26);
+  await page.screenshot({
+    path: `test-results/group-mappings-${test.info().project.name}.png`,
+  });
+  await page
+    .getByRole("button", { name: "Reset mappings", exact: true })
+    .click();
+  await expect(download).toBeEnabled();
+});

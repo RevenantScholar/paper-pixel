@@ -186,16 +186,94 @@ export function quantize(input: Uint8Array, k: number | null): PaletteResult {
     );
   return pack(pixels);
 }
+// @spec ARTWORK-041
+export function suggestGroupTargets(source: RGB[], targets: RGB[]): number[] {
+  if (!targets.length) throw new Error("Choose a target palette.");
+  const from = source.map(oklab),
+    to = targets.map(oklab);
+  const chroma = (colors: RGB[]) =>
+    Math.max(0, ...colors.map((c) => Math.hypot(c[1], c[2])));
+  const scale = Math.max(
+    0.25,
+    Math.min(4, chroma(to) / Math.max(0.02, chroma(from))),
+  );
+  return from.map((lab, i) => {
+    const exact = targets.findIndex((c) => key(c) === key(source[i]));
+    if (exact >= 0) return exact;
+    const adjusted: RGB = [lab[0], lab[1] * scale, lab[2] * scale];
+    let best = 0;
+    for (let j = 1; j < to.length; j++)
+      if (distance(adjusted, to[j]) < distance(adjusted, to[best])) best = j;
+    return best;
+  });
+}
+// @spec ARTWORK-042
+export function recolorGroups(
+  groups: PaletteResult,
+  targets: RGB[],
+): PaletteResult {
+  if (
+    targets.length !== groups.colors.length ||
+    targets.some(
+      (c) =>
+        c.length !== 3 ||
+        c.some((v) => !Number.isInteger(v) || v < 0 || v > 255),
+    )
+  )
+    throw new Error("Choose a valid target for every drawing color.");
+  const lookup = new Map(groups.colors.map((c, i) => [key(c), targets[i]]));
+  const pixels = new Uint8Array(groups.pixels.length);
+  for (let i = 0; i < pixels.length; i += 3) {
+    const color = lookup.get(
+      key([groups.pixels[i], groups.pixels[i + 1], groups.pixels[i + 2]]),
+    );
+    if (!color) throw new Error("Drawing groups do not match the source.");
+    pixels.set(color, i);
+  }
+  return pack(pixels);
+}
+// @spec ARTWORK-036
+export function mapPalette(input: Uint8Array, colors: RGB[]): PaletteResult {
+  if (
+    input.length % 3 ||
+    colors.length < 2 ||
+    colors.length > 256 ||
+    colors.some(
+      (c) =>
+        c.length !== 3 ||
+        c.some((v) => !Number.isInteger(v) || v < 0 || v > 255),
+    )
+  )
+    throw new Error("Invalid selected palette.");
+  const labs = colors.map(oklab),
+    pixels = new Uint8Array(input.length);
+  const lookup = new Map<number, RGB>();
+  for (let i = 0; i < input.length; i += 3) {
+    const source: RGB = [input[i], input[i + 1], input[i + 2]],
+      id = key(source);
+    let color = lookup.get(id);
+    if (!color) {
+      const lab = oklab(source);
+      let best = 0;
+      for (let j = 1; j < labs.length; j++)
+        if (distance(lab, labs[j]) < distance(lab, labs[best])) best = j;
+      color = colors[best];
+      lookup.set(id, color);
+    }
+    pixels.set(color, i);
+  }
+  return pack(pixels);
+}
 // @spec ARTWORK-026, ARTWORK-027, ARTWORK-030, ARTWORK-031, ARTWORK-032
 export class PaletteCache {
   private revision = -1;
-  private values = new Map<number, PaletteResult>();
+  private values = new Map<number | string, PaletteResult>();
   constructor(private capacity = 32) {}
   reset(revision: number) {
     this.revision = revision;
     this.values.clear();
   }
-  get(revision: number, k: number) {
+  get(revision: number, k: number | string) {
     if (revision !== this.revision) return;
     const value = this.values.get(k);
     if (value) {
@@ -204,7 +282,7 @@ export class PaletteCache {
     }
     return value;
   }
-  set(revision: number, k: number, value: PaletteResult) {
+  set(revision: number, k: number | string, value: PaletteResult) {
     if (revision !== this.revision) return;
     this.values.delete(k);
     this.values.set(k, value);

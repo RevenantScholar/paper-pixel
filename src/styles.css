@@ -1231,3 +1231,326 @@ footer > span:last-child {
     -webkit-print-color-adjust: exact;
   }
 }
+
+.palette-mode {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  margin: 18px 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.palette-mode button {
+  flex: 1;
+  min-height: 44px;
+  border-radius: 7px;
+  font-weight: 600;
+}
+.palette-mode button[aria-pressed="true"] {
+  background: var(--green);
+  color: white;
+}
+.selected-palette {
+  min-width: 0;
+}
+.palette-library-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.palette-library-heading h4,
+.palette-editor h4 {
+  margin: 4px 0;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.palette-library-heading a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 44px;
+  font-size: 12px;
+  color: var(--green);
+  text-decoration: underline;
+}
+.palette-library-filters {
+  display: flex;
+  gap: 10px;
+  margin: 12px 0;
+}
+.palette-library-filters label {
+  flex: 1;
+  min-width: 0;
+}
+.palette-library-filters label:last-child {
+  flex: 0 0 110px;
+}
+.palette-library-filters input,
+.palette-library-filters select,
+.palette-import input,
+.saved-palette-label select {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  margin-top: 6px;
+}
+.palette-cards {
+  display: grid;
+  gap: 8px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 4px;
+  margin: 0 -4px;
+}
+.palette-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  text-align: left;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  min-width: 0;
+}
+.palette-card[aria-pressed="true"] {
+  border-color: var(--green);
+  box-shadow: inset 0 0 0 1px var(--green);
+  background: #eef0e6;
+}
+.palette-card-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  overflow-wrap: anywhere;
+}
+.palette-card-title small {
+  flex-shrink: 0;
+}
+.palette-card small {
+  font-size: 11px;
+  color: #656e60;
+}
+.palette-strip {
+  display: flex;
+  width: 100%;
+  height: 24px;
+  overflow: hidden;
+  border-radius: 3px;
+}
+.palette-strip i {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.palette-import {
+  margin: 18px 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.palette-import .inline-actions button {
+  min-height: 44px;
+}
+.saved-palette-label {
+  display: block;
+}
+.saved-palette-label .hint {
+  display: block;
+  float: none;
+  margin-top: 6px;
+}
+.palette-editor {
+  padding: 16px 0;
+  margin-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.palette-editor h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.palette-source {
+  display: inline-block;
+  font-size: 12px;
+  color: var(--green);
+  text-decoration: underline;
+  overflow-wrap: anywhere;
+  padding: 10px 0;
+}
+.palette-editor summary {
+  cursor: pointer;
+  padding: 14px 0;
+  min-height: 44px;
+  font-weight: 600;
+}
+.palette-editor summary:focus-visible {
+  outline: 3px solid #e7a380;
+  outline-offset: 3px;
+}
+.palette-edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0;
+}
+.palette-editor button {
+  min-height: 44px;
+}
+.palette-color-list {
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 4px;
+  margin: 8px -4px;
+}
+.palette-color-row {
+  display: grid;
+  grid-template-columns: 62px 48px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.palette-color-row input {
+  min-width: 0;
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+}
+.palette-color-row input[type="color"] {
+  padding: 3px;
+  cursor: pointer;
+}
+.palette-enabled {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  min-height: 44px;
+  margin: 0;
+  cursor: pointer;
+}
+.palette-enabled input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  min-height: 20px;
+  flex-shrink: 0;
+  accent-color: var(--green);
+}
+.palette-enabled span {
+  float: none;
+}
+.palette-color-row input[aria-invalid="true"] {
+  border-color: #b64c35;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+@media (max-width: 680px) {
+  .palette-library-filters {
+    flex-direction: column;
+  }
+  .palette-library-filters label:last-child {
+    flex: auto;
+  }
+  .selected-palette input:not([type="checkbox"]):not([type="color"]),
+  .selected-palette select {
+    font-size: 16px;
+  }
+}
+
+.palette-edit-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0 14px;
+}
+.palette-edit-preview canvas {
+  width: 112px;
+  height: 112px;
+  image-rendering: pixelated;
+  flex: 0 0 112px;
+}
+
+.group-recoloring {
+  margin: 18px 0;
+  display: grid;
+  gap: 12px;
+}
+.group-recoloring label {
+  display: grid;
+  gap: 6px;
+}
+.group-recoloring input {
+  width: 100%;
+}
+.group-mappings {
+  max-height: 360px;
+  overflow-y: auto;
+  border: 1px solid var(--border, #dedbd2);
+  border-radius: 8px;
+}
+.group-mapping-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 56px;
+  padding: 8px;
+  text-align: left;
+  font-size: 12px;
+}
+.group-mapping-row i {
+  display: block;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border: 1px solid #0003;
+  border-radius: 4px;
+}
+.group-mapping-row small {
+  display: block;
+  font-size: 11px;
+}
+.group-mapping-row > span:nth-child(2) {
+  flex: 1;
+}
+.group-targets {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+  gap: 6px;
+  padding: 8px;
+}
+.group-targets button {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 44px;
+  min-height: 54px;
+  padding: 4px;
+  border: 2px solid transparent;
+  border-radius: 6px;
+}
+.group-targets button[aria-pressed="true"] {
+  border-color: #283e32;
+}
+.group-targets i {
+  width: 100%;
+  flex-shrink: 0;
+  display: block;
+  height: 26px;
+  border: 1px solid #0003;
+  border-radius: 3px;
+}
+.group-targets span {
+  font-size: 11px;
+}

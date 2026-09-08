@@ -19,10 +19,10 @@ Open the local URL printed by Vite. Camera access works on localhost or HTTPS. A
 2. Print the worksheet or save it as a PDF from the print dialog. Keep the grid and corner markers clear and fully visible. Fit-to-page printing on another paper size is supported.
 3. Color the cells, then choose a photo or capture one with the camera.
 4. Check the detected grid, adjust the four handles if needed, and confirm dimensions if the QR could not be read. Convert to pixels.
-5. Choose Full RGB or a palette capacity. Colors are calculated from the drawing; a two-color palette is not necessarily black and white. Uncolored cells contribute their paper color.
+5. Use **From photo** for Full RGB or an inferred color count. Use **Choose palette** for 24 bundled Lospec palettes (six each at 2, 4, 16, and 256 colors), or paste a Lospec palette URL/slug to load another. **Browse on Lospec** opens a new tab. **Recolor groups** first finds the drawing’s colors, then maps whole groups to palette colors. Adjust **Drawing colors** independently of the palette size and tap a mapping row to choose its target; several paper shades can share one background color. **Closest colors** is available for direct pixel matching. Open **Edit colors** to enable/disable colors, change swatches, add colors, undo, or reset.
 6. Export at 1× for one PNG pixel per grid cell, or a larger integer scale for visibility. Output sides are limited to 4096 pixels.
 
-Completed reduced palettes are cached in memory for fast visual comparison (32 least-recently-used entries). Palette caches survive tab navigation and scale changes. A new drawing, changed sampling geometry, or page reload clears them. Photos and artwork are never uploaded.
+Completed reduced palettes are cached in memory for fast visual comparison (up to 32 inferred results and 32 selected-palette results, each using least-recently-used eviction). Palette caches survive tab navigation and scale changes. A new drawing, changed sampling geometry, or page reload clears them. Photos and artwork are never uploaded. Up to 16 loaded palette definitions and their last valid color edits are remembered across refreshes in this browser; photographs and generated artwork are not saved. From photo remains the default on refresh. Bundled palettes work without runtime network requests; only importing additional palettes contacts Lospec.
 
 ## Deploy to Vercel
 
