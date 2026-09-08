@@ -2,8 +2,8 @@
 
 ## Automated Results
 
-- `npm test`: 17 tests passed across layout/metadata, geometry/sampling, palettes/cache/export pixels, image-header limits, worker cancellation, and real marker detection fixtures.
-- Cross-browser suite: 28 distinct checks passed across Chromium, Firefox, and WebKit. The complete run passed 27 checks and identified a WebKit late-camera mock incompatibility; after fixing only that test fixture, the late-camera check passed in all three engines. Two canvas-stream camera fixtures are deliberately skipped in Firefox/WebKit; the synthetic stream capture/cleanup integration runs in Chromium, and late-permission cleanup runs in all engines.
+- `npm test`: 20 tests passed across layout/metadata, geometry/sampling, palettes/cache/export pixels, image-header limits, worker cancellation, and real marker detection fixtures.
+- Cross-browser suite: 28 distinct checks passed across Chromium, Firefox, and WebKit. The complete palette-fix verification run passed all 28 enabled checks. Two canvas-stream camera fixtures are deliberately skipped in Firefox/WebKit; the synthetic stream capture/cleanup integration runs in Chromium, and late-permission cleanup runs in all engines.
 - `npm run build`: TypeScript compilation and the Vite production build passed.
 - `npm run check:intent`: all 83 behavioral requirements have test and implementation references; no unknown spec references.
 - Dependency installation after updating Sharp to 0.35.4 reported zero known vulnerabilities.
@@ -23,6 +23,14 @@ Synthetic marker tests recover exact logical orientation and known colors at 0°
 
 ## Practical Validation Still Needed
 
-No physical print-and-camera trial was performed. Real iPhone/Android photographs, printer margins, pencil/marker texture, uneven lighting, lens distortion, and the initial 64×64 ceiling still require trials. The specified phone performance targets are not claimed as measured benchmarks. Browser-engine testing is not a substitute for physical Safari/Chrome camera behavior.
+A user-provided photograph of a printed 32×32 red/green crayon drawing was evaluated through marker detection, sampling, and palette reduction. Broader physical trials across iPhone/Android cameras, printers, lighting, lens distortion, and the initial 64×64 ceiling remain necessary. The specified phone performance targets are not claimed as measured benchmarks. Browser-engine testing is not a substitute for physical Safari/Chrome camera behavior.
 
 The app is configured for static Vercel deployment but has not been published to a Vercel project. No accounts, secrets, or server processing are needed. Deployment and local-use instructions are in [README.md](../README.md).
+
+## Textured Drawing Palette Regression
+
+The four-color reduction of the photographed crayon drawing mixed pigment hues under equal-axis Oklab distance. Using color-sensitive distance ΔL² + 4Δa² + 4Δb² throughout the quantizer preserves more hue separation. On identical full-resolution cell samples, the four-color red representative changes from RGB (147,118,106) to (168,124,118), and green from (160,167,154) to (138,163,142). These are inferred centroids; no output saturation transform is applied. Browser resizing can change the exact sampled values.
+
+A 32×32 sampled RGB fixture isolates this regression from photo decoding and marker recognition. Its four-color hue-separation test failed with the original implementation and passes with the updated metric. Additional tests verify sixteen-color output, exact Full RGB restoration, source immutability, and neutral grayscale palettes. The full unit/integration suite, browser suite, production build, and intent-link checks pass. Artwork requirements and design use the same metric at all quantizer stages and remain consistent with the high-level image-derived palette architecture.
+
+Central-cell median sampling still suppresses sparse crayon marks when paper dominates the sampled points. The palette change improves color separation after sampling but does not recover those missing strokes or correct photographed paper illumination.

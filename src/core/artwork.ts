@@ -41,8 +41,13 @@ function rgb(c: RGB): RGB {
     ),
   ) as RGB;
 }
+// Preserve pigment hue differences when paper brightness dominates the drawing.
+// Use the same metric for seeding, refinement, and final pixel assignment.
+const axisWeights = [1, 4, 4] as const;
 const distance = (a: RGB, b: RGB) =>
-  (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2;
+  axisWeights[0] * (a[0] - b[0]) ** 2 +
+  axisWeights[1] * (a[1] - b[1]) ** 2 +
+  axisWeights[2] * (a[2] - b[2]) ** 2;
 const key = (c: RGB) => c[0] * 65536 + c[1] * 256 + c[2];
 function pack(pixels: Uint8Array): PaletteResult {
   const map = new Map<number, number>(),
@@ -71,8 +76,10 @@ const mean = (items: Entry[]): RGB => {
 };
 function cluster(items: Entry[]) {
   const center = mean(items),
-    variance = [0, 1, 2].map((i) =>
-      items.reduce((s, e) => s + (e.lab[i] - center[i]) ** 2 * e.weight, 0),
+    variance = [0, 1, 2].map(
+      (i) =>
+        axisWeights[i] *
+        items.reduce((s, e) => s + (e.lab[i] - center[i]) ** 2 * e.weight, 0),
     );
   return {
     items,

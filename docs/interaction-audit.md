@@ -49,3 +49,7 @@ Owning design: Scanner's sampling-quality gate; palette and export controls leav
 ## Validation Status
 
 The approved resolutions are reflected in the component designs, requirements, and implementation. Runtime verification is recorded in [verification.md](verification.md). Physical camera and printer limits still require the trials described in the component designs.
+
+## Color-sensitive Palette Distance
+
+Artwork uses ΔL² + 4Δa² + 4Δb² consistently for initialization errors and axis selection, Lloyd assignment and candidate comparison, and finalized-palette assignment. Frequency-weighted means remain the minimizing centroids for these fixed axis weights. Scanner samples and Full RGB remain unchanged; no saturation transform or special paper-color slot is introduced. Grayscale inputs retain neutral representatives. Reduced results remain deterministic and cacheable by drawing revision and capacity. Distinct hue preservation is preferred to equal-axis lightness fidelity, but small palettes cannot guarantee every pigment a representative.
