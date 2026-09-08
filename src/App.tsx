@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Download,
   Grid2X2,
+  Github,
   ImagePlus,
   LoaderCircle,
   LockKeyhole,
@@ -76,7 +77,7 @@ function errorText(e: unknown) {
     ? e.message
     : "Something went wrong. Please try again.";
 }
-// @spec ARTWORK-001, ARTWORK-004, WORKSHEET-001, WORKSHEET-002, WORKSHEET-003, WORKSHEET-004, WORKSHEET-012, WORKSHEET-017, WORKSHEET-018, WORKSHEET-019, WORKSHEET-020, SCANNER-031
+// @spec ARTWORK-001, ARTWORK-004, WORKSHEET-001, WORKSHEET-002, WORKSHEET-003, WORKSHEET-004, WORKSHEET-012, WORKSHEET-017, WORKSHEET-018, WORKSHEET-019, WORKSHEET-020, WORKSHEET-021, SCANNER-031
 export default function App() {
   const [view, setView] = useState<"create" | "scan">("create"),
     [grid, setGrid] = useState(String(DEFAULT_GRID)),
@@ -401,9 +402,22 @@ export default function App() {
             paper<span className="brand-light">pixel</span>
             <span className="beta">BETA</span>
           </a>
-          <div className="private-label">
-            <LockKeyhole size={13} />
-            <span>Your art stays on your device</span>
+          <div className="header-links">
+            <div className="private-label">
+              <LockKeyhole size={13} />
+              <span>Your art stays on your device</span>
+            </div>
+            <a
+              className="github-link"
+              href="https://github.com/RevenantScholar/paper-pixel"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="GitHub repository (opens in a new tab)"
+              title="GitHub repository (opens in a new tab)"
+            >
+              <Github size={18} aria-hidden="true" />
+              <span>GitHub</span>
+            </a>
           </div>
         </header>
         <main>

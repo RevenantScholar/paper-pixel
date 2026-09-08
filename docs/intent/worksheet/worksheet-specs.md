@@ -30,3 +30,5 @@ Design: [Worksheet](worksheet-design.md). Unchecked requirements are active impl
 - [x] **WORKSHEET-018**: When navigating between Create and Scan, the application shall preserve current in-memory work; when reloading the application, it shall start a fresh session.
 - [x] **WORKSHEET-019**: The application shall build as a Vercel-hostable static Vite frontend with bundled processing assets and shall process photographs and artwork locally without uploading them.
 - [x] **WORKSHEET-020**: The application shell shall provide labeled keyboard-operable controls, visible focus, associated validation messages, and responsive views without horizontal page scrolling at viewport widths of 320 CSS pixels or greater.
+
+- [x] **WORKSHEET-021**: The application header shall provide an accessible GitHub repository link to `https://github.com/RevenantScholar/paper-pixel` in both views, visible at supported mobile widths, opening in a new tab with `rel="noopener noreferrer"`, and hidden during printing.

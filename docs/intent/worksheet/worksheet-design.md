@@ -37,6 +37,8 @@ The metadata parser accepts only this complete grammar, with a 64-character cap,
 
 `WorksheetConfig` contains print settings `version: 1`, `gridSize: integer`, and `paper: A4 | LETTER`. `WorksheetMetadata` contains only version and grid size. `RecognitionLayout` contains normalized drawing bounds, marker IDs and four canonical corners per marker, and QR bounds. `WorksheetLayout` places that recognition layout on the selected physical page; the scanner consumes only `RecognitionLayout` and `WorksheetMetadata`. Pure functions validate configuration, calculate layout, encode/decode metadata, and render vector content. They must not access camera state or mutate artwork.
 
+The shared header provides a GitHub repository link to `https://github.com/RevenantScholar/paper-pixel`. It opens in a new tab to preserve the current drawing, remains accessible on mobile, and is hidden with application chrome when printing.
+
 Worksheet owns the static application shell: Create and Scan navigation, responsive layout, shared accessible form components, and Vercel build configuration. The frontend is a single-page Vite application without path-based routes. Navigation changes views without losing current in-memory work. Refresh starts a fresh session. Camera and image-processing assets are bundled with the app and loaded locally from the deployment; there are no remote image-processing calls.
 
 Worksheet configuration is distinct from a loaded scan's configuration. Printing a new grid cannot reinterpret an existing scan. Scanner owns explicit changes to the scan's dimensions or alignment.

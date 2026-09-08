@@ -32,9 +32,18 @@ async function load(page: any) {
     page.getByRole("button", { name: "Download PNG", exact: true }),
   ).toBeEnabled({ timeout: 20000 });
 }
-// @spec WORKSHEET-001, WORKSHEET-002, WORKSHEET-003, WORKSHEET-004, WORKSHEET-005, WORKSHEET-012, WORKSHEET-020
+// @spec WORKSHEET-001, WORKSHEET-002, WORKSHEET-003, WORKSHEET-004, WORKSHEET-005, WORKSHEET-012, WORKSHEET-020, WORKSHEET-021
 test("configure and print a full-page worksheet", async ({ page }) => {
   await page.goto("/");
+  const github = page.getByRole("link", {
+    name: "GitHub repository (opens in a new tab)",
+  });
+  await expect(github).toHaveAttribute(
+    "href",
+    "https://github.com/RevenantScholar/paper-pixel",
+  );
+  await expect(github).toHaveAttribute("target", "_blank");
+  await expect(github).toHaveAttribute("rel", "noopener noreferrer");
   await page.screenshot({
     path: `test-results/create-desktop-${test.info().project.name}.png`,
     fullPage: true,
@@ -60,6 +69,7 @@ test("configure and print a full-page worksheet", async ({ page }) => {
   expect(await page.evaluate(() => (window as any).__printed)).toBe(true);
   await page.emulateMedia({ media: "print" });
   await expect(page.locator(".print-sheet > svg")).toBeVisible();
+  await expect(github).toBeHidden();
   if (test.info().project.name === "chromium") {
     const pdf = await page.pdf({ preferCSSPageSize: true });
     expect(
@@ -68,6 +78,7 @@ test("configure and print a full-page worksheet", async ({ page }) => {
   }
   await page.emulateMedia({ media: "screen" });
   await page.setViewportSize({ width: 320, height: 812 });
+  await expect(github).toBeVisible();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,

@@ -135,6 +135,25 @@ label span {
   margin-left: 12px;
   font-weight: 600;
 }
+.header-links {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.github-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 44px;
+  min-height: 44px;
+  font-size: 12px;
+  color: var(--green);
+  border-radius: 6px;
+}
+.github-link:hover {
+  color: var(--orange);
+}
 .private-label {
   display: flex;
   align-items: center;
@@ -1028,6 +1047,12 @@ footer > span:last-child {
   }
   .brand {
     font-size: 23px;
+  }
+  .header-links {
+    gap: 6px;
+  }
+  .github-link span {
+    display: none;
   }
   .private-label span {
     display: none;
