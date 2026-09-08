@@ -2,7 +2,7 @@
 
 ## Automated Results
 
-- `npm test`: 20 tests passed across layout/metadata, geometry/sampling, palettes/cache/export pixels, image-header limits, worker cancellation, and real marker detection fixtures.
+- `npm test`: 21 tests passed across layout/metadata, geometry/sampling, palettes/cache/export pixels, image-header limits, worker cancellation, and real marker detection fixtures.
 - Cross-browser suite: 28 distinct checks passed across Chromium, Firefox, and WebKit. The complete palette-fix verification run passed all 28 enabled checks. Two canvas-stream camera fixtures are deliberately skipped in Firefox/WebKit; the synthetic stream capture/cleanup integration runs in Chromium, and late-permission cleanup runs in all engines.
 - `npm run build`: TypeScript compilation and the Vite production build passed.
 - `npm run check:intent`: all 83 behavioral requirements have test and implementation references; no unknown spec references.
@@ -29,8 +29,10 @@ The app is configured for static Vercel deployment but has not been published to
 
 ## Textured Drawing Palette Regression
 
-The four-color reduction of the photographed crayon drawing mixed pigment hues under equal-axis Oklab distance. Using color-sensitive distance ΔL² + 4Δa² + 4Δb² throughout the quantizer preserves more hue separation. On identical full-resolution cell samples, the four-color red representative changes from RGB (147,118,106) to (168,124,118), and green from (160,167,154) to (138,163,142). These are inferred centroids; no output saturation transform is applied. Browser resizing can change the exact sampled values.
+The quantizer uses color-sensitive distance ΔL² + 8Δa² + 8Δb² for initialization, refinement, and final assignment. It infers centroids without a saturation transform or illumination correction. The sampled crayon fixture verifies separate red/green representatives and maps the 5×5 lower-left blank-paper patch to the same color as brighter paper when capacity is three. The corner regression failed under the previous axis weights and passes with the current metric. This is a measured fixture result, not a guarantee of shadow removal under arbitrary lighting.
 
-A 32×32 sampled RGB fixture isolates this regression from photo decoding and marker recognition. Its four-color hue-separation test failed with the original implementation and passes with the updated metric. Additional tests verify sixteen-color output, exact Full RGB restoration, source immutability, and neutral grayscale palettes. The full unit/integration suite, browser suite, production build, and intent-link checks pass. Artwork requirements and design use the same metric at all quantizer stages and remain consistent with the high-level image-derived palette architecture.
+A 32×32 sampled RGB fixture isolates palette regressions from photo decoding and marker recognition. Tests cover three-, four-, and sixteen-color output, source immutability, deterministic results, exact Full RGB restoration, and neutral grayscale palettes. All 21 unit/integration tests, the production build, and intent-link checks pass. Artwork requirements and design use the same metric at all quantizer stages and remain consistent with the high-level image-derived palette architecture.
 
-Central-cell median sampling still suppresses sparse crayon marks when paper dominates the sampled points. The palette change improves color separation after sampling but does not recover those missing strokes or correct photographed paper illumination.
+Nine targeted production-build browser checks pass across Chromium, Firefox, and WebKit: actual marker scanning and scaled PNG export, custom three-color export and 3→5→3 cached restoration, and palette cache preservation across navigation. A separate local Chromium check processes the user-provided full photo and decodes the downloaded three-color PNG; all 25 lower-left blank cells match the paper representative. The original photo remains outside the committed test fixtures.
+
+Central-cell median sampling still suppresses sparse crayon marks when paper dominates the sampled points. Palette matching does not recover those missing strokes or normalize photographed paper illumination.

@@ -43,7 +43,7 @@ function rgb(c: RGB): RGB {
 }
 // Preserve pigment hue differences when paper brightness dominates the drawing.
 // Use the same metric for seeding, refinement, and final pixel assignment.
-const axisWeights = [1, 4, 4] as const;
+const axisWeights = [1, 8, 8] as const;
 const distance = (a: RGB, b: RGB) =>
   axisWeights[0] * (a[0] - b[0]) ** 2 +
   axisWeights[1] * (a[1] - b[1]) ** 2 +

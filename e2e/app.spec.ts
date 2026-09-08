@@ -113,6 +113,32 @@ test("scan actual markers, infer green/blue, and download a scaled PNG", async (
     unique.add([...decoded.data.subarray(i, i + 3)].join(","));
   expect(unique.size).toBe(2);
 });
+// @spec ARTWORK-002, ARTWORK-003, ARTWORK-014, ARTWORK-016, ARTWORK-020, ARTWORK-026, ARTWORK-027
+test("custom three-color palette exports and restores from cache", async ({
+  page,
+}) => {
+  await load(page);
+  await page.getByLabel("Palette size").selectOption("custom");
+  await page.getByLabel("Custom color count").fill("3");
+  await expect(page.getByText("3 colors", { exact: true })).toBeVisible();
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download PNG", exact: true }).click();
+  const file = await download;
+  const { data, info } = await sharp((await file.path())!)
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  expect([info.width, info.height]).toEqual([4, 4]);
+  const unique = new Set<string>();
+  for (let i = 0; i < data.length; i += 3)
+    unique.add([...data.subarray(i, i + 3)].join(","));
+  expect(unique.size).toBe(3);
+  await page.getByLabel("Custom color count").fill("5");
+  await expect(page.getByText("5 colors", { exact: true })).toBeVisible();
+  await page.getByLabel("Custom color count").fill("3");
+  await expect(page.getByText("Cached palette", { exact: true })).toBeVisible();
+  await expect(page.getByText("3 colors", { exact: true })).toBeVisible();
+});
 // @spec WORKSHEET-017, WORKSHEET-018, ARTWORK-014, ARTWORK-016, ARTWORK-026, ARTWORK-027, ARTWORK-028, ARTWORK-029, ARTWORK-031, SCANNER-031
 test("compare cached palettes and preserve work across navigation", async ({
   page,
